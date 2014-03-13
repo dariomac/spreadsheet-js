@@ -156,12 +156,12 @@ function Sheet(RowCount, ColCount, updateDependentCells){
 	function UpdateDependentCells(cell){
 		//obtengo las celdas dependientes de cell (o sea, celdas para las que cell sea precedente)
 		var cellDependents = _precedents.get(cell.Ref());
+
 		if (typeof cellDependents != 'undefined'){
 			cellDependents.moveFirst();
 
 			while(cellDependents.next()){
-				var dependentRef = SplitReference(cellDependents.getValue());
-				var dependentCell = _sheet[dependentRef['row']][dependentRef['col']];
+				var dependentCell = cellDependents.getValue();
 
 				SetCellValue(dependentCell, EvaluateFormula(dependentCell));
 			}
@@ -196,7 +196,7 @@ function Sheet(RowCount, ColCount, updateDependentCells){
 		if (refs != null){
 			for(var i=0; i<refs.length; i++){
 
-				AddToPrecedents(startCell.Ref(), refs[i]);
+				AddToPrecedents(startCell, refs[i]);
 
 				var cellRef = SplitReference(refs[i]);
 				var nextCell = _sheet[cellRef['row']][cellRef['col']];
@@ -262,7 +262,7 @@ function Sheet(RowCount, ColCount, updateDependentCells){
 			_precedents.put(precedent, new Hashtable());
 		}
 
-		_precedents.get(precedent).put(dependent, dependent);
+		_precedents.get(precedent).put(dependent.Ref(), dependent);
 	}
 
 	function SetCellValue(cell, value){
