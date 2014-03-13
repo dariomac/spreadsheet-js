@@ -1,0 +1,214 @@
+<html>
+	<head>
+		<script src="../lib/jsSheet.js"></script>
+		<script src="text.js"></script>
+
+		<script>
+			var _sheet;
+
+			var rows;
+			var cols;
+
+			function MakeSheet(txt_row, txt_col){
+				rows = txt_row;
+				cols = txt_col;
+
+				_sheet = new Sheet(rows,cols,false);
+				_sheet.CellUpdated(p);
+				_sheet.ErrorThrowed(err);
+
+				var tdSheet = document.getElementById('td_sheet');
+
+				var tblRow = '<tr>{0}</tr>';
+				var tblCell = '<td><input type="text" id="{0}{1}" onBlur="UpdateSheet(this.id, this.value);" onFocus="ShowFormula(this.id)" value="0"> </td>'
+				var tblHeader = '<td align="center">{0}</td>'
+				var tblSheet = '';
+
+				for(var i=0; i<=rows; i++){
+					var tmpCells = '';
+					for(var j=0; j<=cols; j++){
+						if(i==0 && j==0)
+							tmpCells += String.format(tblHeader, '');
+						else
+							if(i==0)
+								tmpCells += String.format(tblHeader, SheetUtil.GetColumnName(j));
+							else
+								if(j==0)
+									tmpCells += String.format(tblHeader, i);
+								else
+									tmpCells += String.format(tblCell, SheetUtil.GetColumnName(j), i);
+					}
+					tblSheet += String.format(tblRow, tmpCells);
+				}
+
+				tdSheet.innerHTML = String.format('<table cellpadding=0 cellspacing=0>{0}</table>',tblSheet);
+			}
+
+			function UpdateSheet(id, value){
+				_sheet.SetValue(id, value);
+			}
+
+			function ShowFormula(id){
+				var formula = _sheet.GetFormula(id);
+				if(isNaN(formula)){
+					var elem = document.getElementById(id);
+					elem.value = formula;
+
+					var range = elem.createTextRange();
+					range.move('character', elem.value.length);
+					range.select();
+				}
+			}
+
+			function MakeScript(){
+				var txt_code = document.getElementById('txt_code');
+				txt_code.value = '';
+
+				txt_code.value = String.format('var _sheet = new Sheet({0},{1});\r\n',rows,cols);
+				for(var i=1; i<=rows; i++){
+					for(var j=1; j<=cols; j++){
+						var ref = String.format('{0}{1}', SheetUtil.GetColumnName(j), i);
+						var val = _sheet.GetFormula(ref);
+
+						if (typeof val != 'undefined')
+							txt_code.value += String.format('_sheet.SetValue(\'{0}\', \'{1}\');\r\n', ref, val);
+					}
+				}
+				txt_code.value += '\r\n_sheet.CellUpdated(CellEventHandler);\r\n';
+				txt_code.value += '\r\nfunction CellEventHandler(e, args){\r\n';
+				txt_code.value += '\te.srcElement is the DOM object (control) that throw the event\r\n';
+				txt_code.value += '\tvar args = arg.split(\'=\');\r\n';
+				txt_code.value += '\t//args[0]=cell ref ; args1[1]=cell value\r\n';
+				txt_code.value += '\tdocument.getElementById(args[0]).value = args[1];\r\n';
+				txt_code.value += '}';
+			}
+
+			function SaveSheet(){
+				if(typeof rows=='undefined' || typeof cols=='undefined') return;
+				var serialSheet = '';
+				for(var i=1; i<=rows; i++){
+					for(var j=1; j<=cols; j++){
+						var ref = String.format('{0}{1}', SheetUtil.GetColumnName(j), i);
+						var val = _sheet.GetFormula(ref);
+
+						if (typeof val != 'undefined')
+							serialSheet += String.format('{0}{1}|{2}', (serialSheet == '')?'':'~', ref, val);
+					}
+				}
+
+				serialSheet = String.format('{0}_{1}]{2}', rows, cols, serialSheet);
+
+				document.getElementById('txt_serial').innerHTML = serialSheet;
+			}
+
+			function LoadSerialSheet(serialSheet){
+				if (serialSheet == '') return;
+
+				var firstSplit = serialSheet.split(']');
+
+				rows = firstSplit[0].split('_')[0];
+				cols = firstSplit[0].split('_')[1];
+
+				MakeSheet(rows, cols);
+
+				var refVals = firstSplit[1].split('~');
+
+				for(var i=0; i<refVals.length; i++){
+					var refVal = refVals[i].split('|');
+					_sheet.SetValue(refVal[0], refVal[1]);
+					document.getElementById(refVal[0]).value = refVal[1];
+				}
+
+				for(var i=1; i<=rows; i++){
+					for(var j=1; j<=cols; j++){
+						var ref = String.format('{0}{1}', SheetUtil.GetColumnName(j), i);
+						document.getElementById(ref).value = _sheet.GetValue(ref);
+					}
+				}
+			}
+
+			function p(e, arg){
+				var args = arg.split('=');
+				document.getElementById(args[0]).value = args[1];
+			}
+
+			function err(e, arg){
+				//var args = arg.split(':');
+				document.getElementById('txt_err').value += arg + '\r\n';
+			}
+		</script>
+	</head>
+	<body>
+		<table border="1" align="center">
+			<tr>
+				<td>Enter number of rows:</td>
+				<td><input type="text" id="txt_rows"></td>
+			</tr>
+			<tr>
+				<td>Enter number of cols:</td>
+				<td><input type="text" id="txt_cols"></td>
+			</tr>
+			<tr>
+				<td colspan="2" align="center"><input type="button" value="Generate grid" onClick="javascript:MakeSheet(txt_rows.value, txt_cols.value)"></td>
+			</tr>
+		</table>
+
+		<table border="1" align="center">
+			<tr>
+				<td colspan="2">
+					<center align="center">Serialized spreadsheet</center>
+					<textarea cols="80" id="txt_serial" rows="10"></textarea>
+				</td>
+			</tr>
+			<tr>
+				<td align="right">
+					<input type="button" value="Load sheet" onClick="javascript:LoadSerialSheet(txt_serial.innerHTML)">
+				</td>
+				<td>
+					<input type="button" value="Save sheet" onClick="javascript:SaveSheet()">
+				</td>
+			</tr>
+		</table>
+
+		<div align="center">
+			<table>
+				<tr>
+					<td id="td_sheet"></td>
+				</tr>
+			</table>
+		</div>
+		<center>
+			<input type="button" value="Suspend Layout" onClick="_sheet.SuspendLayout();">
+			<input type="button" value="Resume Layout" onClick="_sheet.ResumeLayout();">
+		</center>
+		<table border="1" align="center">
+			<tr>
+				<td>
+					<center>
+						Error panel<br>
+						<textarea cols="80" id="txt_err" rows="10"></textarea>
+					</center>
+				</td>
+			</tr>
+		</table>
+		<table border="1" align="center">
+			<tr>
+				<td>
+					<script>
+						function Test(){
+							_sheet.SuspendLayout();
+							_sheet.UpdateValue('G2');
+							_sheet.ResumeLayout();
+						}
+					</script>
+					<input type="button" value="test" onClick="Test()">
+					<center>
+						<input type="button" value="Make script" onClick="MakeScript()"><br>
+						<textarea cols="80" id="txt_code" rows="20"></textarea>
+					</center>
+				</td>
+			</tr>
+		</table>
+
+	</body>
+</html>
