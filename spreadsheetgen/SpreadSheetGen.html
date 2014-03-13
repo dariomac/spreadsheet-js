@@ -1,8 +1,12 @@
 <html>
 	<head>
-		<script src="../lib/jsSheet.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+
+		<script src="../src/jsSheet.js"></script>
 		<script src="text.js"></script>
-<!-- comment on dev-->
+
+<!-- comment from v2 -->
+
 		<script>
 			var _sheet;
 
@@ -42,6 +46,10 @@
 				}
 
 				tdSheet.innerHTML = String.format('<table cellpadding=0 cellspacing=0>{0}</table>',tblSheet);
+
+				$('#txt_err').val('');
+				$('#txt_code').val('');
+				$('#txt_serial').val('');
 			}
 
 			function UpdateSheet(id, value){
@@ -54,9 +62,13 @@
 					var elem = document.getElementById(id);
 					elem.value = formula;
 
-					var range = elem.createTextRange();
-					range.move('character', elem.value.length);
-					range.select();
+					if (elem.createTextRange){
+						var range = elem.createTextRange();
+						range.move('character', elem.value.length);
+						range.select();
+					}
+					else
+						elem.setSelectionRange(0, elem.value.length);
 				}
 			}
 
@@ -98,7 +110,7 @@
 
 				serialSheet = String.format('{0}_{1}]{2}', rows, cols, serialSheet);
 
-				document.getElementById('txt_serial').innerHTML = serialSheet;
+				$('#txt_serial').val(serialSheet);
 			}
 
 			function LoadSerialSheet(serialSheet){
@@ -136,9 +148,51 @@
 				//var args = arg.split(':');
 				document.getElementById('txt_err').value += arg + '\r\n';
 			}
+
+			$(function() {
+				$('#txt_rows').val(10);
+				$('#txt_cols').val(30);
+
+				MakeSheet($('#txt_rows').val(), $('#txt_cols').val());
+				_sheet.SuspendLayout();
+
+				_sheet.SetValue('C3', 3);
+				_sheet.SetValue('C4', 4);
+				_sheet.SetValue('B3', 8);
+				_sheet.SetValue('B4', 1.9);
+				_sheet.SetValue('D3', 20);
+				_sheet.SetValue('D4', 5);
+
+				_sheet.SetValue('AB10', 25);
+				_sheet.SetValue('E1', '=SUM(C3,B4,AB10)');
+				_sheet.SetValue('E2', '=C3*B3')
+				_sheet.SetValue('E3', '=RouNd(AvG(b3:d4),2)');
+				_sheet.SetValue('E4', '=ROUND(B3/C3,2)');
+				_sheet.SetValue('E5', '=AVG(B3:D4)');
+				_sheet.SetValue('E6', '=IF(AVG(C3,B4)==2.45,"correcto","incorrecto")');
+				_sheet.SetValue('E7', '=POW(D4,2)');
+				_sheet.SetValue('E8', '=MAX(B3:AB10)');
+				_sheet.SetValue('E9', '=MIN(B3:D4)');
+				_sheet.SetValue('E10', '=LOOKUP(8,B3:B4,C3:C4)');
+				_sheet.SetValue('F1', '=COUNT.IF(B3:D4,"<=5")');
+				_sheet.SetValue('F2', '=SUM.IF(B3:D4,"<=5")');
+				_sheet.SetValue('F3', '=F3+E1');
+
+				_sheet.ResumeLayout();
+			});
 		</script>
 	</head>
 	<body>
+	http://c2.com/cgi/wiki?MicrosoftExcelProgrammingLanguage<br/>
+	http://stackoverflow.com/questions/1954470/spreadsheets-that-use-a-functional-programming-language<br/>
+	http://www.resolversystems.com/products/resolver-one/<br/>
+	http://lambda-the-ultimate.org/node/2893<br/>
+	http://richk.net/os/doc/index.html<br/>
+
+		<p>I've developed jsSheet (yes, I know that the name is awful) because I need the same behaviour that you can see in a spreadsheet, i.e. change some value and every related formula have to be updated. So, this is not a user control that emulate a spreadsheet. It's a formula engine that execute excel like formulas and for each updated cell raises an event letting the developer take some action.</p>
+
+		<p>Why?</p>
+		<p>Well. Have you tryied to emulate this behaviour in pure javascript? In some project I needed to develop a complex calculator in a web environment and let the user "play" with the values of a economic proposal and see the results. Also, the formula of the calculated values need to be changed easily (requirements change everytime). This scenario can be easily modelled in Excel, but it's more difficult to develop in javascript.</p>
 		<table border="1" align="center">
 			<tr>
 				<td>Enter number of rows:</td>
@@ -150,23 +204,6 @@
 			</tr>
 			<tr>
 				<td colspan="2" align="center"><input type="button" value="Generate grid" onClick="javascript:MakeSheet(txt_rows.value, txt_cols.value)"></td>
-			</tr>
-		</table>
-
-		<table border="1" align="center">
-			<tr>
-				<td colspan="2">
-					<center align="center">Serialized spreadsheet</center>
-					<textarea cols="80" id="txt_serial" rows="10"></textarea>
-				</td>
-			</tr>
-			<tr>
-				<td align="right">
-					<input type="button" value="Load sheet" onClick="javascript:LoadSerialSheet(txt_serial.innerHTML)">
-				</td>
-				<td>
-					<input type="button" value="Save sheet" onClick="javascript:SaveSheet()">
-				</td>
 			</tr>
 		</table>
 
@@ -194,18 +231,18 @@
 		<table border="1" align="center">
 			<tr>
 				<td>
-					<script>
-						function Test(){
-							_sheet.SuspendLayout();
-							_sheet.UpdateValue('G2');
-							_sheet.ResumeLayout();
-						}
-					</script>
-					<input type="button" value="test" onClick="Test()">
 					<center>
+						Copy&amp;Paste code</br>
 						<input type="button" value="Make script" onClick="MakeScript()"><br>
 						<textarea cols="80" id="txt_code" rows="20"></textarea>
 					</center>
+				</td>
+				<td valign="top">
+					<center align="center">Serialized spreadsheet<br/>
+						<input type="button" value="Load sheet" onClick="javascript:LoadSerialSheet($('#txt_serial').val())">
+						<input type="button" value="Save sheet" onClick="javascript:SaveSheet()">
+					</center>
+					<textarea cols="40" id="txt_serial" rows="20"></textarea>
 				</td>
 			</tr>
 		</table>
